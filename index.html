@@ -58,6 +58,14 @@
         <button type="submit" class="enlace fuerte">Guardar</button>
       </div>
       <div class="form-cuerpo">
+        <div class="escaneo">
+          <div class="fila">
+            <button type="button" id="btn-escanear" class="btn marca">Escanear código</button>
+            <button type="button" id="btn-foto" class="btn">Desde foto</button>
+          </div>
+          <input id="archivo-foto" type="file" accept="image/*" hidden>
+          <p id="estado-scan" class="estado-scan" role="status" hidden></p>
+        </div>
         <label>Nombre *<input name="nombre" required placeholder="Ej.: Ibuprofeno 600 mg"></label>
         <label>Caducidad *<input name="caducidad" type="month" required></label>
         <label>Tipo / forma farmacéutica
@@ -67,13 +75,28 @@
         <label>Para qué sirve<textarea name="indicaciones" rows="3" placeholder="Ej.: Dolor y fiebre"></textarea></label>
         <label>Principio(s) activo(s)<input name="principios" placeholder="Ej.: Ibuprofeno"></label>
         <label>Laboratorio<input name="laboratorio"></label>
-        <label>Código Nacional (CN)<input name="cn" inputmode="numeric" placeholder="6 o 7 dígitos del envase"></label>
+        <div class="campo">
+          <span class="etq">Código Nacional (CN)</span>
+          <div class="con-boton">
+            <input name="cn" inputmode="numeric" placeholder="6 dígitos del envase">
+            <button type="button" id="btn-cima" class="btn">Buscar</button>
+          </div>
+        </div>
+        <label>Lote<input name="lote"></label>
         <label>Unidades restantes<input name="cantidad" type="number" inputmode="numeric" min="0" placeholder="Ej.: 12"></label>
         <label>Ubicación en casa<input name="ubicacion" placeholder="Ej.: Cocina, armario alto"></label>
         <label>Notas<textarea name="notas" rows="2"></textarea></label>
         <button type="button" id="btn-borrar" class="btn peligro" hidden>Eliminar medicamento</button>
       </div>
     </form>
+  </div>
+
+  <!-- Pantalla de la cámara para escanear -->
+  <div id="escaner" class="escaner" hidden>
+    <video id="video" playsinline muted autoplay></video>
+    <div class="mira"></div>
+    <p id="escaner-estado" class="escaner-estado"></p>
+    <button type="button" id="escaner-cerrar" class="btn escaner-cerrar">Cancelar</button>
   </div>
 
   <div id="toast" class="toast" hidden></div>

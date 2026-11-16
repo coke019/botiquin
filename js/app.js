@@ -1,4 +1,6 @@
 import { obtenerTodos, guardar, eliminar } from './db.js';
+import { escanearCamara, escanearFoto, parsearCodigo, cargarZXing } from './scan.js';
+import { buscarPorCN, indicaciones } from './cima.js';
 
 const $ = (sel) => document.querySelector(sel);
 const TIPOS = ['Comprimidos', 'Cápsulas', 'Jarabe', 'Gotas', 'Sobres', 'Pomada / crema', 'Gel',
@@ -89,6 +91,7 @@ function abrirForm(med) {
   editandoId = med ? med.id : null;
   const f = $('#form');
   f.reset();
+  $('#estado-scan').hidden = true;
   $('#form-titulo').textContent = med ? 'Editar medicamento' : 'Nuevo medicamento';
   $('#btn-borrar').hidden = !med;
   if (med) Object.keys(med).forEach((k) => { if (f.elements[k]) f.elements[k].value = med[k] ?? ''; });
@@ -107,6 +110,8 @@ async function enviarForm(ev) {
   await guardar(med);
   cerrarForm();
   await cargar();
+// Con conexión, se descarga el lector de códigos en segundo plano para poder escanear sin conexión más adelante
+if (navigator.onLine) setTimeout(() => cargarZXing().catch(() => {}), 4000);
   aviso('Guardado');
 }
 
@@ -152,7 +157,90 @@ async function importar(ev) {
   }
 }
 
+/* ---------- Escaneo y CIMA ---------- */
+function estadoScan(texto, tipo = '') {
+  const e = $('#estado-scan');
+  e.textContent = texto; e.className = 'estado-scan ' + tipo; e.hidden = false;
+}
+
+// Rellena un campo solo si está vacío (o si se pide sobrescribir), para no pisar lo que ya has escrito
+function poner(campo, valor, sobrescribir) {
+  const input = $('#form').elements[campo];
+  if (valor && input && (sobrescribir || !input.value.trim())) input.value = valor;
+}
+
+async function consultarCima(cn, sobrescribir) {
+  estadoScan('Consultando CIMA…');
+  try {
+    const r = await buscarPorCN(cn);
+    if (!r) { estadoScan('Ese código no aparece en CIMA. Completa los datos a mano.', 'aviso'); return; }
+    poner('nombre', r.nombre, sobrescribir);
+    poner('laboratorio', r.laboratorio, sobrescribir);
+    poner('principios', r.principios, sobrescribir);
+    poner('tipo', r.tipo, sobrescribir);
+    estadoScan('Datos cargados desde CIMA. Buscando indicaciones…', 'ok');
+    const ind = await indicaciones(r.nregistro);
+    poner('indicaciones', ind, sobrescribir);
+    estadoScan(ind ? 'Datos cargados desde CIMA. Revísalos antes de guardar.'
+                   : 'Datos cargados desde CIMA. No se encontraron indicaciones: escríbelas tú si quieres.', 'ok');
+  } catch (e) {
+    const msg = {
+      sinconexion: 'Sin conexión. El código se ha guardado; completa el resto a mano.',
+      bloqueado: 'No se pudo consultar CIMA desde el navegador (puede estar bloqueado). Completa los datos a mano.',
+      cn: 'El Código Nacional debe tener 6 dígitos.',
+      http: `CIMA respondió con un error (${e.detalle}). Inténtalo más tarde o completa a mano.`
+    }[e.codigo] || 'No se pudo consultar CIMA. Completa los datos a mano.';
+    estadoScan(msg, 'error');
+  }
+}
+
+async function procesarCodigo(texto) {
+  const p = parsearCodigo(texto);
+  if (!p.cn) {
+    estadoScan('Código leído, pero no parece de un medicamento español. Prueba con el código del envase o introduce los datos a mano.', 'aviso');
+    return;
+  }
+  const f = $('#form');
+  const esOtro = f.elements.cn.value && f.elements.cn.value !== p.cn; // otro envase distinto: se reemplaza todo
+  f.elements.cn.value = p.cn;
+  if (p.caducidad) f.elements.caducidad.value = p.caducidad;
+  if (p.lote) f.elements.lote.value = p.lote;
+  await consultarCima(p.cn, esOtro);
+  if (p.caducidad) estadoScan($('#estado-scan').textContent + ` Caducidad leída del envase: ${fechaCorta(p.caducidad)}.`, $('#estado-scan').className.replace('estado-scan', '').trim());
+}
+
+function errorEscaneo(e) {
+  if (e.name === 'NotAllowedError' || e.name === 'SecurityError') return 'No hay permiso para usar la cámara. Actívalo en Ajustes del iPhone o usa «Desde foto».';
+  if (e.name === 'NotFoundError' || e.name === 'OverconstrainedError') return 'No se encontró ninguna cámara. Usa «Desde foto».';
+  return e.message || 'No se pudo escanear. Usa «Desde foto» o introduce los datos a mano.';
+}
+
 /* ---------- Eventos ---------- */
+$('#btn-escanear').addEventListener('click', async () => {
+  try {
+    estadoScan('Abriendo la cámara…');
+    const texto = await escanearCamara();
+    if (texto) await procesarCodigo(texto); else $('#estado-scan').hidden = true;
+  } catch (e) { estadoScan(errorEscaneo(e), 'error'); }
+});
+$('#btn-foto').addEventListener('click', () => $('#archivo-foto').click());
+$('#archivo-foto').addEventListener('change', async (ev) => {
+  const foto = ev.target.files[0];
+  ev.target.value = '';
+  if (!foto) return;
+  estadoScan('Analizando la foto…');
+  try {
+    const texto = await escanearFoto(foto);
+    if (texto) await procesarCodigo(texto);
+    else estadoScan('No se encontró ningún código en la foto. Acércate, con buena luz y enfocando bien el código.', 'aviso');
+  } catch (e) { estadoScan(errorEscaneo(e), 'error'); }
+});
+$('#btn-cima').addEventListener('click', () => {
+  const cn = $('#form').elements.cn.value;
+  if (!cn.trim()) { estadoScan('Escribe primero el Código Nacional (6 dígitos).', 'aviso'); return; }
+  consultarCima(cn, false);
+});
+
 $('#tipos').innerHTML = TIPOS.map((t) => `<option value="${esc(t)}">`).join('');
 $('#buscar').addEventListener('input', pintar);
 $('#filtro-tipo').addEventListener('change', pintar);

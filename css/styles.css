@@ -107,3 +107,21 @@ main { padding: 12px 16px calc(120px + env(safe-area-inset-bottom)); }
   background: var(--texto); color: var(--fondo); padding: 10px 18px; border-radius: 20px; font-size: 14px;
 }
 :focus-visible { outline: 3px solid var(--marca); outline-offset: 2px; }
+
+/* ---------- Fase 2: escaneo ---------- */
+.btn.marca { background: var(--marca); border-color: var(--marca); color: var(--sobre-marca); font-weight: 600; }
+.escaneo { display: grid; gap: 10px; }
+.estado-scan { margin: 0; padding: 10px 12px; border-radius: 12px; font-size: 14px; background: var(--superficie); border: 1px solid var(--linea); color: var(--texto); }
+.estado-scan.ok { background: var(--verde-fondo); border-color: var(--verde); color: var(--verde); }
+.estado-scan.aviso { background: var(--naranja-fondo); border-color: var(--naranja); color: var(--naranja); }
+.estado-scan.error { background: var(--rojo-fondo); border-color: var(--rojo); color: var(--rojo); }
+.form-cuerpo .campo { display: grid; gap: 6px; font-size: 14px; color: var(--suave); }
+.con-boton { display: flex; gap: 8px; }
+.con-boton input { flex: 1; min-width: 0; }
+.con-boton .btn { flex: none; padding: 0 18px; }
+
+.escaner { position: fixed; inset: 0; z-index: 40; background: #000; display: grid; place-items: center; }
+.escaner video { width: 100%; height: 100%; object-fit: cover; }
+.mira { position: absolute; width: 72%; max-width: 380px; aspect-ratio: 1.5; border: 3px solid rgba(255, 255, 255, .85); border-radius: 18px; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .35); pointer-events: none; }
+.escaner-estado { position: absolute; left: 16px; right: 16px; top: calc(20px + env(safe-area-inset-top)); margin: 0; text-align: center; color: #fff; font-size: 15px; text-shadow: 0 1px 4px #000; }
+.escaner-cerrar { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(28px + env(safe-area-inset-bottom)); flex: none; min-width: 160px; background: rgba(255, 255, 255, .92); color: #14201b; border-color: transparent; font-weight: 600; }
