@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <!-- viewport-fit=cover permite usar toda la pantalla del iPhone (notch y barra inferior) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Botiquín</title>
+  <meta name="description" content="Gestor personal del botiquín de casa">
+  <link rel="manifest" href="manifest.json">
+  <!-- Ajustes para iOS al instalar en la pantalla de inicio -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Botiquín">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="theme-color" content="#f2f5f3" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#101614" media="(prefers-color-scheme: dark)">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="top">
+    <h1>Botiquín</h1>
+    <p id="resumen" class="resumen"></p>
+    <input id="buscar" type="search" placeholder="Buscar medicamento, principio activo…" autocomplete="off">
+    <div class="chips" id="chips">
+      <button class="chip activo" data-f="todos">Todos</button>
+      <button class="chip" data-f="caducado">Caducados</button>
+      <button class="chip" data-f="pronto">Caducan pronto</button>
+      <button class="chip" data-f="ok">Correctos</button>
+    </div>
+    <select id="filtro-tipo" aria-label="Filtrar por tipo"></select>
+  </header>
+
+  <main>
+    <ul id="lista" class="lista"></ul>
+    <p id="vacio" class="vacio" hidden></p>
+
+    <section class="pie">
+      <h2>Copia de seguridad</h2>
+      <p>Tus datos se guardan solo en este teléfono. Haz copias de vez en cuando.</p>
+      <div class="fila">
+        <button id="btn-exportar" class="btn sec">Exportar copia</button>
+        <button id="btn-importar" class="btn sec">Importar copia</button>
+      </div>
+      <input id="archivo" type="file" accept=".json,application/json" hidden>
+      <p class="aviso">Esta app es solo informativa y no sustituye al prospecto ni al consejo de un profesional sanitario.</p>
+    </section>
+  </main>
+
+  <button id="btn-nuevo" class="fab" aria-label="Añadir medicamento">+</button>
+
+  <!-- Hoja con el formulario de alta / edición -->
+  <div id="hoja" class="hoja" hidden>
+    <form id="form" class="form" autocomplete="off">
+      <div class="form-cab">
+        <button type="button" id="btn-cancelar" class="enlace">Cancelar</button>
+        <h2 id="form-titulo">Nuevo medicamento</h2>
+        <button type="submit" class="enlace fuerte">Guardar</button>
+      </div>
+      <div class="form-cuerpo">
+        <label>Nombre *<input name="nombre" required placeholder="Ej.: Ibuprofeno 600 mg"></label>
+        <label>Caducidad *<input name="caducidad" type="month" required></label>
+        <label>Tipo / forma farmacéutica
+          <input name="tipo" list="tipos" placeholder="Ej.: Comprimidos">
+          <datalist id="tipos"></datalist>
+        </label>
+        <label>Para qué sirve<textarea name="indicaciones" rows="3" placeholder="Ej.: Dolor y fiebre"></textarea></label>
+        <label>Principio(s) activo(s)<input name="principios" placeholder="Ej.: Ibuprofeno"></label>
+        <label>Laboratorio<input name="laboratorio"></label>
+        <label>Código Nacional (CN)<input name="cn" inputmode="numeric" placeholder="6 o 7 dígitos del envase"></label>
+        <label>Unidades restantes<input name="cantidad" type="number" inputmode="numeric" min="0" placeholder="Ej.: 12"></label>
+        <label>Ubicación en casa<input name="ubicacion" placeholder="Ej.: Cocina, armario alto"></label>
+        <label>Notas<textarea name="notas" rows="2"></textarea></label>
+        <button type="button" id="btn-borrar" class="btn peligro" hidden>Eliminar medicamento</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
