@@ -1,12 +1,11 @@
 // Configuración de Firebase para compartir el botiquín entre varios teléfonos.
-// Mientras esté sin rellenar, la app funciona igual que siempre (solo en este teléfono)
-// y la opción "Compartir con la familia" no aparece.
-// Sustituye los valores PEGA_AQUI por los que te da Firebase (no son secretos: los protegen las reglas).
+// Estos valores no son secretos: quien protege los datos son las reglas de seguridad de Firestore.
 export const firebaseConfig = {
-  apiKey: "PEGA_AQUI",
-  authDomain: "PEGA_AQUI",
-  projectId: "PEGA_AQUI",
-  storageBucket: "PEGA_AQUI",
-  messagingSenderId: "PEGA_AQUI",
-  appId: "PEGA_AQUI"
+  apiKey: "AIzaSyB-a1eiP-25SY2un1FI3osk5T3B1Mu0meQ",
+  authDomain: "botiquin-familia-22622.firebaseapp.com",
+  projectId: "botiquin-familia-22622",
+  storageBucket: "botiquin-familia-22622.firebasestorage.app",
+  messagingSenderId: "343375869789",
+  appId: "1:343375869789:web:aa26ebe0fa05840c701ab4",
+  measurementId: "G-PB8899N4SK"
 };
