@@ -24,5 +24,13 @@ async function operar(modo, fn) {
 }
 
 export const obtenerTodos = () => operar('readonly', (s) => s.getAll());
-export const guardar = (med) => operar('readwrite', (s) => s.put(med));
-export const eliminar = (id) => operar('readwrite', (s) => s.delete(id));
+export const obtenerUno = (id) => operar('readonly', (s) => s.get(id));
+export const guardarLocal = (med) => operar('readwrite', (s) => s.put(med));
+export const eliminarLocal = (id) => operar('readwrite', (s) => s.delete(id));
+
+// Avisos opcionales para la sincronización (sync.js): se ejecutan cuando ESTE teléfono guarda o elimina
+const oyentes = { guardado: null, eliminado: null };
+export const alCambiar = (guardado, eliminado) => { oyentes.guardado = guardado; oyentes.eliminado = eliminado; };
+
+export const guardar = async (med) => { await guardarLocal(med); if (oyentes.guardado) oyentes.guardado(med); };
+export const eliminar = async (id) => { await eliminarLocal(id); if (oyentes.eliminado) oyentes.eliminado(id); };

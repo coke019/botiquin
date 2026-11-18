@@ -1,6 +1,7 @@
 import { obtenerTodos, guardar, eliminar } from './db.js';
 import { escanearCamara, escanearFoto, parsearCodigo, cargarZXing } from './scan.js';
 import { buscarPorCN, indicaciones } from './cima.js';
+import * as sync from './sync.js';
 
 const $ = (sel) => document.querySelector(sel);
 const TIPOS = ['Comprimidos', 'Cápsulas', 'Jarabe', 'Gotas', 'Sobres', 'Pomada / crema', 'Gel',
@@ -304,6 +305,94 @@ function errorEscaneo(e) {
   return e.message || 'No se pudo escanear. Usa «Desde foto» o introduce los datos a mano.';
 }
 
+/* ---------- Compartir con la familia ---------- */
+const TEXTO_SYNC = {
+  ok: 'Sincronizado', subiendo: 'Sincronizando…', conectando: 'Conectando…',
+  sinconexion: 'Sin conexión: se sincronizará al volver', error: 'Error de sincronización'
+};
+const MENSAJES_SYNC = {
+  codigo: 'El código no es válido. Revisa que lo has escrito completo y sin errores.',
+  sinconexion: 'Necesitas conexión a internet para continuar.',
+  permiso: 'Firebase ha rechazado la conexión. Revisa que las reglas de seguridad están publicadas.',
+  servidor: 'No se pudo conectar con el servidor. Inténtalo de nuevo en un momento.',
+  sdk: 'No se pudo cargar el servicio de sincronización. Inténtalo de nuevo.'
+};
+let estadoSync = '';
+
+function msgFamilia(texto, tipo = '') {
+  const e = $('#familia-msg');
+  e.textContent = texto; e.className = 'estado-scan ' + tipo; e.hidden = !texto;
+}
+
+function pintarFamilia() {
+  $('#bloque-familia').hidden = !sync.disponible;
+  if (!sync.disponible) return;
+  const codigo = sync.codigoGuardado();
+  const estadoTxt = TEXTO_SYNC[estadoSync] || 'Conectando…';
+  $('#sync-resumen').textContent = codigo ? `Compartido con tu familia · ${estadoTxt}` : 'Usa el mismo botiquín en varios teléfonos.';
+  $('#btn-familia').textContent = codigo ? 'Ver código y ajustes' : 'Compartir con la familia';
+  $('#familia-sin').hidden = !!codigo;
+  $('#familia-con').hidden = !codigo;
+  if (codigo) {
+    $('#familia-codigo-ver').textContent = sync.formatearCodigo(codigo);
+    const e = $('#familia-estado');
+    e.textContent = estadoTxt;
+    e.className = 'estado-scan ' + (estadoSync === 'ok' ? 'ok' : estadoSync === 'error' ? 'error' : estadoSync === 'sinconexion' ? 'aviso' : '');
+  }
+}
+const alEstadoSync = (e) => { estadoSync = e; pintarFamilia(); };
+
+async function conectarFamilia(codigo, opciones = {}) {
+  msgFamilia('Conectando…');
+  try {
+    await sync.conectar(codigo, { ...opciones, alDatos: cargar, alEstado: alEstadoSync });
+    msgFamilia('');
+    pintarFamilia();
+    await cargar();
+    aviso('Botiquín compartido');
+  } catch (e) {
+    if (e.codigo === 'vacio') {
+      msgFamilia('');
+      if (confirm('No hay medicamentos guardados con ese código. Comprueba que lo has escrito bien.\n\n¿Unirte igualmente?')) return conectarFamilia(codigo, { ...opciones, forzar: true });
+      return;
+    }
+    msgFamilia(MENSAJES_SYNC[e.codigo] || 'No se pudo conectar. Inténtalo de nuevo.', 'error');
+  }
+}
+
+function abrirFamilia() { msgFamilia(''); pintarFamilia(); $('#hoja-familia').hidden = false; document.body.classList.add('bloqueado'); }
+function cerrarFamilia() { $('#hoja-familia').hidden = true; document.body.classList.remove('bloqueado'); }
+
+$('#btn-familia').addEventListener('click', abrirFamilia);
+$('#familia-cerrar').addEventListener('click', cerrarFamilia);
+$('#familia-crear').addEventListener('click', () => {
+  if (!confirm(`Se creará un grupo familiar y tus ${meds.length} medicamentos se guardarán en Firebase (Google) para poder compartirlos. ¿Continuar?`)) return;
+  conectarFamilia(sync.nuevoCodigo(), { creando: true });
+});
+$('#familia-unirse').addEventListener('click', () => {
+  const codigo = $('#familia-codigo').value;
+  if (!codigo.trim()) { msgFamilia('Escribe primero el código.', 'aviso'); return; }
+  if (meds.length && !confirm(`Tus ${meds.length} medicamentos actuales se añadirán al botiquín compartido. ¿Continuar?`)) return;
+  conectarFamilia(codigo);
+});
+$('#familia-copiar').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(sync.formatearCodigo(sync.codigoGuardado())); aviso('Código copiado'); }
+  catch { aviso('No se pudo copiar: mantén pulsado el código para copiarlo'); }
+});
+$('#familia-compartir').addEventListener('click', async () => {
+  const codigo = sync.formatearCodigo(sync.codigoGuardado());
+  const texto = `Código de nuestro botiquín: ${codigo}\nInstala la app, entra en «Compartir con la familia» y escribe este código.`;
+  if (navigator.share) { try { await navigator.share({ text: texto }); return; } catch (e) { if (e.name === 'AbortError') return; } }
+  try { await navigator.clipboard.writeText(texto); aviso('Texto copiado'); } catch { aviso('No se pudo compartir'); }
+});
+$('#familia-dejar').addEventListener('click', () => {
+  if (!confirm('Dejarás de compartir el botiquín. Los medicamentos se quedan en este teléfono, pero los cambios ya no se sincronizarán. ¿Continuar?')) return;
+  sync.dejar();
+  estadoSync = '';
+  pintarFamilia();
+  aviso('Has dejado de compartir');
+});
+
 /* ---------- Eventos ---------- */
 $('#btn-escanear').addEventListener('click', async () => {
   try {
@@ -364,6 +453,8 @@ $('#btn-importar').addEventListener('click', () => $('#archivo').click());
 $('#archivo').addEventListener('change', importar);
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+pintarFamilia();
+if (sync.disponible && sync.codigoGuardado()) sync.reanudar({ alDatos: cargar, alEstado: alEstadoSync });
 cargar().then(() => notificarSiProcede());
 // Pide a iOS que no borre los datos de la app si hay poco espacio
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});

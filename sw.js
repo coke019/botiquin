@@ -1,7 +1,7 @@
 // Service worker: permite que la app funcione sin conexión.
 // IMPORTANTE: cuando cambies cualquier archivo, sube el número de versión
 // (v1 -> v2 -> v3...) para que los móviles descarguen la versión nueva.
-const CACHE = 'botiquin-v3';
+const CACHE = 'botiquin-v4';
 const CACHE_LIBS = 'botiquin-libs-zxing-0.21.3'; // el lector de códigos, guardado aparte
 const LIBS = [
   'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js',
@@ -9,7 +9,7 @@ const LIBS = [
 ];
 const ARCHIVOS = [
   './', './index.html', './manifest.json',
-  './css/styles.css', './js/app.js', './js/db.js', './js/scan.js', './js/cima.js',
+  './css/styles.css', './js/app.js', './js/db.js', './js/scan.js', './js/cima.js', './js/sync.js', './js/firebase-config.js',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'
 ];
 
@@ -31,7 +31,8 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   // Lector de códigos (otro dominio): primero la copia guardada; si no existe, se descarga y se guarda
-  if (LIBS.includes(req.url)) {
+  // (también las piezas de Firebase, para poder sincronizar sin conexión)
+  if (LIBS.includes(req.url) || req.url.startsWith('https://www.gstatic.com/firebasejs/10.14.1/')) {
     e.respondWith(caches.match(req).then((g) => g || fetch(req).then((r) => {
       if (r.ok) { const c = r.clone(); caches.open(CACHE_LIBS).then((ca) => ca.put(req, c)); }
       return r;

@@ -40,7 +40,12 @@
     <p id="vacio" class="vacio" hidden></p>
 
     <section class="pie">
-      <h2>Copia de seguridad</h2>
+      <div id="bloque-familia" hidden>
+        <h2>Compartir con la familia</h2>
+        <p id="sync-resumen">Usa el mismo botiquín en varios teléfonos.</p>
+        <div class="fila"><button id="btn-familia" class="btn marca">Compartir con la familia</button></div>
+      </div>
+      <h2 class="sub">Copia de seguridad</h2>
       <p>Tus datos se guardan solo en este teléfono. Haz copias de vez en cuando.</p>
       <div class="fila">
         <button id="btn-exportar" class="btn sec">Exportar copia</button>
@@ -95,6 +100,39 @@
         <button type="button" id="btn-borrar" class="btn peligro" hidden>Eliminar medicamento</button>
       </div>
     </form>
+  </div>
+
+  <!-- Hoja para compartir con la familia -->
+  <div id="hoja-familia" class="hoja" hidden>
+    <div class="form-cab">
+      <span></span><h2>Familia</h2>
+      <button type="button" id="familia-cerrar" class="enlace fuerte">Cerrar</button>
+    </div>
+    <div class="form-cuerpo">
+      <div id="familia-sin" class="bloque">
+        <p class="nota">Comparte este botiquín con tu familia: lo que añada uno, le aparece al otro.</p>
+        <button type="button" id="familia-crear" class="btn marca">Crear grupo familiar</button>
+        <div class="campo">
+          <span class="etq">¿Te han dado un código?</span>
+          <div class="con-boton">
+            <input id="familia-codigo" placeholder="XXXX-XXXX-XXXX-…" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false">
+            <button type="button" id="familia-unirse" class="btn">Unirme</button>
+          </div>
+        </div>
+        <p class="nota">Al compartir, la lista de medicamentos (nombres, caducidades, notas…) se guarda en servidores de Google (Firebase). Cualquiera que tenga el código puede verla y modificarla: trátalo como una contraseña.</p>
+      </div>
+      <div id="familia-con" class="bloque" hidden>
+        <p class="nota">Este botiquín está compartido. Para añadir a otra persona, pásale este código e indícale que lo escriba en «Compartir con la familia».</p>
+        <div id="familia-codigo-ver" class="codigo"></div>
+        <div class="fila">
+          <button type="button" id="familia-copiar" class="btn">Copiar código</button>
+          <button type="button" id="familia-compartir" class="btn marca">Compartir</button>
+        </div>
+        <p id="familia-estado" class="estado-scan"></p>
+        <button type="button" id="familia-dejar" class="btn peligro">Dejar de compartir</button>
+      </div>
+      <p id="familia-msg" class="estado-scan" role="status" hidden></p>
+    </div>
   </div>
 
   <!-- Pantalla de la cámara para escanear -->
