@@ -2,17 +2,17 @@
 :root {
   --fondo: #f2f5f3; --superficie: #ffffff; --texto: #14201b; --suave: #5b6b64; --linea: #dbe3df;
   --marca: #0f6b4f; --sobre-marca: #ffffff;
-  --rojo: #c62828; --rojo-fondo: #fdecea;
-  --naranja: #b85c00; --naranja-fondo: #fff1e0;
-  --verde: #1b7a4b; --verde-fondo: #e4f4ea;
+  --rojo: #b3201a; --rojo-fondo: #fde4e1; --rojo-solido: #c62828; --sobre-rojo: #ffffff;
+  --naranja: #a34700; --naranja-fondo: #ffe9cf; --naranja-solido: #c25100; --sobre-naranja: #ffffff;
+  --verde: #1b7a4b; --verde-fondo: #e4f4ea; --verde-solido: #2e9e63;
 }
 @media (prefers-color-scheme: dark) {
   :root {
     --fondo: #101614; --superficie: #1a2320; --texto: #e8f0ec; --suave: #98a9a1; --linea: #2b3833;
     --marca: #3fbf94; --sobre-marca: #08140f;
-    --rojo: #ff8a80; --rojo-fondo: #3a1f1d;
-    --naranja: #ffb066; --naranja-fondo: #3a2a14;
-    --verde: #6fd9a2; --verde-fondo: #17301f;
+    --rojo: #ff9d94; --rojo-fondo: #3f1e1b; --rojo-solido: #d6392e; --sobre-rojo: #ffffff;
+    --naranja: #ffbd7a; --naranja-fondo: #3d2a12; --naranja-solido: #f29a3c; --sobre-naranja: #1f1200;
+    --verde: #6fd9a2; --verde-fondo: #17301f; --verde-solido: #3fbf94;
   }
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -30,8 +30,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* Cabecera fija con buscador y filtros */
 .top {
-  position: sticky; top: 0; z-index: 5; background: var(--fondo);
-  padding: 14px 16px 10px; border-bottom: 1px solid var(--linea);
+  background: var(--fondo); padding: 14px 16px 10px;
 }
 .resumen { margin: 2px 0 12px; color: var(--suave); font-size: 14px; }
 input[type=search], .top select {
@@ -39,34 +38,55 @@ input[type=search], .top select {
   background: var(--superficie); padding: 0 14px;
 }
 .top select { margin-top: 10px; }
-.chips { display: flex; gap: 8px; overflow-x: auto; margin-top: 10px; padding-bottom: 2px; scrollbar-width: none; }
-.chips::-webkit-scrollbar { display: none; }
+.fila-busqueda { display: flex; gap: 8px; }
+.fila-busqueda input { flex: 1; min-width: 0; }
+.fila-busqueda select { width: 38%; margin-top: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .chip {
-  flex: none; min-height: 40px; padding: 0 16px; border-radius: 20px;
-  border: 1px solid var(--linea); background: var(--superficie);
+  flex: none; min-height: 40px; padding: 0 14px; border-radius: 20px; font-weight: 600;
+  border: 2px solid var(--linea); background: var(--superficie);
 }
-.chip.activo { background: var(--marca); border-color: var(--marca); color: var(--sobre-marca); font-weight: 600; }
+.chip.caducado { border-color: var(--rojo-solido); color: var(--rojo); }
+.chip.pronto { border-color: var(--naranja-solido); color: var(--naranja); }
+.chip.ok { border-color: var(--verde-solido); color: var(--verde); }
+.chip.activo { background: var(--marca); border-color: var(--marca); color: var(--sobre-marca); }
+.chip.caducado.activo { background: var(--rojo-solido); border-color: var(--rojo-solido); color: var(--sobre-rojo); }
+.chip.pronto.activo { background: var(--naranja-solido); border-color: var(--naranja-solido); color: var(--sobre-naranja); }
+.chip.ok.activo { background: var(--verde-solido); border-color: var(--verde-solido); color: var(--sobre-marca); }
 
-/* Tarjetas de medicamentos: el borde izquierdo es el "semáforo" */
+/* Avisos de arriba */
 main { padding: 12px 16px calc(120px + env(safe-area-inset-bottom)); }
+.avisos { display: grid; gap: 10px; margin-bottom: 12px; }
+.avisos:empty { display: none; }
+.banner { display: grid; gap: 3px; width: 100%; text-align: left; border: 0; border-radius: 14px; padding: 14px 16px; cursor: pointer; font-size: 14px; line-height: 1.35; }
+.banner strong { font-size: 16px; }
+.banner.rojo { background: var(--rojo-solido); color: var(--sobre-rojo); }
+.banner.naranja { background: var(--naranja-solido); color: var(--sobre-naranja); }
+.banner.azul, .banner.neutro { background: var(--superficie); color: var(--texto); border: 1px solid var(--linea); }
+
+/* Tarjetas: color según estado (rojo caducado, naranja pronto, verde correcto) */
 .lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.tarjeta {
-  width: 100%; text-align: left; display: grid; gap: 4px; cursor: pointer;
-  background: var(--superficie); border: 1px solid var(--linea); border-left-width: 6px;
-  border-radius: 14px; padding: 14px;
-}
-.tarjeta.caducado { border-left-color: var(--rojo); }
-.tarjeta.pronto { border-left-color: var(--naranja); }
-.tarjeta.ok { border-left-color: var(--verde); }
+.tarjeta { background: var(--superficie); border: 1px solid var(--linea); border-left-width: 9px; border-radius: 14px; overflow: hidden; }
+.tarjeta.caducado { background: var(--rojo-fondo); border-color: var(--rojo-solido); }
+.tarjeta.pronto { background: var(--naranja-fondo); border-color: var(--naranja-solido); }
+.tarjeta.ok { border-left-color: var(--verde-solido); }
+.t-abrir { width: 100%; text-align: left; display: grid; gap: 4px; background: none; border: 0; padding: 14px 14px 10px; cursor: pointer; }
 .t-fila { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
 .t-fila strong { font-size: 17px; }
+.tarjeta.caducado .t-fila strong { color: var(--rojo); }
+.tarjeta.pronto .t-fila strong { color: var(--naranja); }
 .t-sub, .t-pie { color: var(--suave); font-size: 14px; }
 .t-desc { font-size: 15px; }
-.sello { flex: none; font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 12px; }
-.sello.caducado { background: var(--rojo-fondo); color: var(--rojo); }
-.sello.pronto { background: var(--naranja-fondo); color: var(--naranja); }
+.sello { flex: none; font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 12px; }
+.sello.caducado { background: var(--rojo-solido); color: var(--sobre-rojo); }
+.sello.pronto { background: var(--naranja-solido); color: var(--sobre-naranja); }
 .sello.ok { background: var(--verde-fondo); color: var(--verde); }
+.t-uds { display: flex; align-items: center; justify-content: space-between; padding: 0 14px 12px; color: var(--suave); font-size: 14px; }
+.paso { display: flex; align-items: center; gap: 12px; }
+.paso button { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--linea); background: var(--superficie); font-size: 22px; line-height: 1; cursor: pointer; }
+.paso b { min-width: 28px; text-align: center; font-size: 17px; color: var(--texto); }
 .vacio { text-align: center; color: var(--suave); padding: 40px 10px; }
+.pie h2.sub { margin-top: 22px; }
 
 /* Copia de seguridad y aviso */
 .pie { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--linea); }

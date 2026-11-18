@@ -1,7 +1,7 @@
 // Service worker: permite que la app funcione sin conexión.
 // IMPORTANTE: cuando cambies cualquier archivo, sube el número de versión
 // (v1 -> v2 -> v3...) para que los móviles descarguen la versión nueva.
-const CACHE = 'botiquin-v2';
+const CACHE = 'botiquin-v3';
 const CACHE_LIBS = 'botiquin-libs-zxing-0.21.3'; // el lector de códigos, guardado aparte
 const LIBS = [
   'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js',
@@ -50,4 +50,11 @@ self.addEventListener('fetch', (e) => {
       return guardado || red;
     })
   );
+});
+
+// Al tocar una notificación, se abre (o se trae al frente) la app
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((lista) =>
+    lista.length ? lista[0].focus() : self.clients.openWindow('./')));
 });

@@ -39,23 +39,29 @@ function actualizarTipos() {
   const sel = $('#filtro-tipo');
   const actual = sel.value || 'todos';
   const usados = [...new Set(meds.map((m) => m.tipo).filter(Boolean))].sort();
-  sel.innerHTML = '<option value="todos">Todos los tipos</option>' +
+  sel.innerHTML = '<option value="todos">Tipo</option>' +
     usados.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
   sel.value = usados.includes(actual) ? actual : 'todos';
 }
 
+const ETIQUETAS = { todos: 'Todos', caducado: 'Caducados', pronto: 'Caducan pronto', ok: 'Correctos' };
+const contar = () => {
+  const c = { todos: meds.length, caducado: 0, pronto: 0, ok: 0 };
+  meds.forEach((m) => c[estado(m).clave]++);
+  return c;
+};
+
 function pintar() {
   const texto = normal($('#buscar').value.trim());
   const tipo = $('#filtro-tipo').value;
+  const cuenta = contar();
 
-  const cuenta = { caducado: 0, pronto: 0 };
-  meds.forEach((m) => { const e = estado(m).clave; if (cuenta[e] !== undefined) cuenta[e]++; });
-  const partes = [];
-  if (cuenta.caducado) partes.push(`${cuenta.caducado} caducado${cuenta.caducado > 1 ? 's' : ''}`);
-  if (cuenta.pronto) partes.push(`${cuenta.pronto} caduca${cuenta.pronto > 1 ? 'n' : ''} pronto`);
+  document.querySelectorAll('.chip').forEach((c) => { c.textContent = `${ETIQUETAS[c.dataset.f]} ${cuenta[c.dataset.f]}`; });
   $('#resumen').textContent = meds.length
-    ? (partes.join(' y ') || 'Todo en orden') + ` · ${meds.length} en total`
+    ? `${meds.length} ${meds.length === 1 ? 'medicamento' : 'medicamentos'} en el botiquín`
     : 'Aún no hay medicamentos';
+  pintarAvisos(cuenta);
+  actualizarInsignia(cuenta);
 
   const visibles = meds
     .filter((m) => filtro === 'todos' || estado(m).clave === filtro)
@@ -65,12 +71,18 @@ function pintar() {
 
   $('#lista').innerHTML = visibles.map((m) => {
     const e = estado(m);
-    return `<li><button class="tarjeta ${e.clave}" data-id="${esc(m.id)}">
-      <span class="t-fila"><strong>${esc(m.nombre)}</strong><span class="sello ${e.clave}">${esc(e.texto)}</span></span>
-      <span class="t-sub">${esc([m.tipo, m.principios].filter(Boolean).join(' · '))}</span>
-      ${m.indicaciones ? `<span class="t-desc">${esc(m.indicaciones)}</span>` : ''}
-      <span class="t-pie">Caduca ${fechaCorta(m.caducidad)}${m.cantidad !== '' && m.cantidad != null ? ` · ${esc(m.cantidad)} uds.` : ''}${m.ubicacion ? ` · ${esc(m.ubicacion)}` : ''}</span>
-    </button></li>`;
+    const id = esc(m.id);
+    const conUnidades = m.cantidad !== '' && m.cantidad != null && !isNaN(Number(m.cantidad));
+    return `<li class="tarjeta ${e.clave}">
+      <button class="t-abrir" data-id="${id}">
+        <span class="t-fila"><strong>${esc(m.nombre)}</strong><span class="sello ${e.clave}">${esc(e.texto)}</span></span>
+        <span class="t-sub">${esc([m.tipo, m.principios].filter(Boolean).join(' · '))}</span>
+        ${m.indicaciones ? `<span class="t-desc">${esc(m.indicaciones)}</span>` : ''}
+        <span class="t-pie">Caduca ${fechaCorta(m.caducidad)}${m.ubicacion ? ` · ${esc(m.ubicacion)}` : ''}</span>
+      </button>
+      ${conUnidades ? `<div class="t-uds"><span>Unidades</span>
+        <div class="paso"><button data-ac="menos" data-id="${id}" aria-label="Quitar una unidad">−</button><b>${esc(m.cantidad)}</b><button data-ac="mas" data-id="${id}" aria-label="Añadir una unidad">+</button></div></div>` : ''}
+    </li>`;
   }).join('');
 
   const vacio = $('#vacio');
@@ -78,6 +90,12 @@ function pintar() {
   vacio.textContent = meds.length
     ? 'Ningún medicamento coincide con la búsqueda o el filtro.'
     : 'Toca el botón + para añadir tu primer medicamento.';
+}
+
+function activarFiltro(f) {
+  filtro = f;
+  document.querySelectorAll('.chip').forEach((c) => c.classList.toggle('activo', c.dataset.f === f));
+  pintar();
 }
 
 async function cargar() {
@@ -110,8 +128,6 @@ async function enviarForm(ev) {
   await guardar(med);
   cerrarForm();
   await cargar();
-// Con conexión, se descarga el lector de códigos en segundo plano para poder escanear sin conexión más adelante
-if (navigator.onLine) setTimeout(() => cargarZXing().catch(() => {}), 4000);
   aviso('Guardado');
 }
 
@@ -130,13 +146,15 @@ async function exportar() {
   const archivo = new File([json], nombre, { type: 'application/json' });
   // En iPhone se usa el menú Compartir (guardar en Archivos, AirDrop, correo…)
   if (navigator.canShare && navigator.canShare({ files: [archivo] })) {
-    try { await navigator.share({ files: [archivo], title: 'Copia del botiquín' }); return; }
+    try { await navigator.share({ files: [archivo], title: 'Copia del botiquín' }); ls.set('ultimaCopia', Date.now()); pintar(); return; }
     catch (e) { if (e.name === 'AbortError') return; }
   }
   const url = URL.createObjectURL(archivo);
   const a = Object.assign(document.createElement('a'), { href: url, download: nombre });
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+  ls.set('ultimaCopia', Date.now());
+  pintar();
 }
 
 async function importar(ev) {
@@ -155,6 +173,70 @@ async function importar(ev) {
   } catch {
     alert('No se pudo leer el archivo. Comprueba que es una copia exportada desde esta app.');
   }
+}
+
+/* ---------- Avisos, notificaciones y copias ---------- */
+const ls = {
+  get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
+  set: (k, v) => { try { localStorage.setItem(k, String(v)); } catch { /* sin almacenamiento */ } }
+};
+const DIAS_COPIA = 30; // cada cuántos días se recuerda hacer una copia de seguridad
+if (!ls.get('primerUso')) ls.set('primerUso', Date.now());
+
+const copiaPendiente = () =>
+  meds.length > 0 && Date.now() - Number(ls.get('ultimaCopia') || ls.get('primerUso')) > DIAS_COPIA * 86400000;
+const puedeNotificar = () => 'Notification' in window && 'serviceWorker' in navigator;
+const instalada = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+
+function pintarAvisos(c) {
+  let h = '';
+  if (c.caducado) {
+    h += `<button class="banner rojo" data-f="caducado"><strong>${c.caducado} ${c.caducado === 1 ? 'medicamento caducado' : 'medicamentos caducados'}</strong>
+      <span>No los uses. Llévalos a un punto SIGRE de la farmacia.</span></button>`;
+  }
+  if (c.pronto) {
+    const nombres = meds.filter((m) => estado(m).clave === 'pronto').sort((a, b) => a.caducidad.localeCompare(b.caducidad))
+      .slice(0, 3).map((m) => esc(m.nombre)).join(', ');
+    h += `<button class="banner naranja" data-f="pronto"><strong>${c.pronto} ${c.pronto === 1 ? 'caduca' : 'caducan'} en menos de ${DIAS_AVISO} días</strong>
+      <span>${nombres}${c.pronto > 3 ? '…' : ''}</span></button>`;
+  }
+  if (copiaPendiente()) {
+    h += `<button class="banner azul" data-ac="copia"><strong>Hace tiempo que no haces una copia de seguridad</strong><span>Toca para exportarla ahora.</span></button>`;
+  }
+  if (meds.length && puedeNotificar() && instalada() && Notification.permission === 'default') {
+    h += `<button class="banner neutro" data-ac="avisos"><strong>Activar notificaciones</strong><span>Te avisaremos al abrir la app si hay medicamentos caducados o a punto de caducar.</span></button>`;
+  }
+  $('#avisos').innerHTML = h;
+}
+
+// Numerito rojo sobre el icono de la app (iOS 16.4+ con las notificaciones activadas)
+function actualizarInsignia(c) {
+  const n = c.caducado + c.pronto;
+  try {
+    if (navigator.setAppBadge) (n ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(() => {});
+  } catch { /* no disponible */ }
+}
+
+async function notificarSiProcede(forzar = false) {
+  if (!puedeNotificar() || Notification.permission !== 'granted') return;
+  const c = contar();
+  if (!c.caducado && !c.pronto) return;
+  const hoy = new Date().toISOString().slice(0, 10);
+  if (!forzar && ls.get('ultimoAviso') === hoy) return; // como mucho una vez al día
+  ls.set('ultimoAviso', hoy);
+  const partes = [];
+  if (c.caducado) partes.push(`${c.caducado} ${c.caducado === 1 ? 'caducado' : 'caducados'}`);
+  if (c.pronto) partes.push(`${c.pronto} ${c.pronto === 1 ? 'caduca' : 'caducan'} pronto`);
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    await reg.showNotification('Botiquín', { body: partes.join(' · '), icon: 'icons/icon-192.png', tag: 'caducidad' });
+  } catch { /* si el navegador no lo permite, queda el aviso dentro de la app */ }
+}
+
+async function activarAvisos() {
+  const r = await Notification.requestPermission();
+  if (r === 'granted') { aviso('Notificaciones activadas'); await notificarSiProcede(true); }
+  pintar();
 }
 
 /* ---------- Escaneo y CIMA ---------- */
@@ -199,6 +281,13 @@ async function procesarCodigo(texto) {
   if (!p.cn) {
     estadoScan('Código leído, pero no parece de un medicamento español. Prueba con el código del envase o introduce los datos a mano.', 'aviso');
     return;
+  }
+  if (!editandoId) {
+    const repetido = meds.find((m) => m.cn === p.cn);
+    if (repetido && confirm(`Ya tienes «${repetido.nombre}» en el botiquín (caduca ${fechaCorta(repetido.caducidad)}).\n\n¿Quieres abrirlo para editarlo?\nSi es otro envase, pulsa Cancelar para añadirlo como nuevo.`)) {
+      abrirForm(repetido);
+      return;
+    }
   }
   const f = $('#form');
   const esOtro = f.elements.cn.value && f.elements.cn.value !== p.cn; // otro envase distinto: se reemplaza todo
@@ -245,13 +334,25 @@ $('#tipos').innerHTML = TIPOS.map((t) => `<option value="${esc(t)}">`).join('');
 $('#buscar').addEventListener('input', pintar);
 $('#filtro-tipo').addEventListener('change', pintar);
 $('#chips').addEventListener('click', (e) => {
-  const b = e.target.closest('.chip'); if (!b) return;
-  filtro = b.dataset.f;
-  document.querySelectorAll('.chip').forEach((c) => c.classList.toggle('activo', c === b));
-  pintar();
+  const b = e.target.closest('.chip'); if (b) activarFiltro(b.dataset.f);
 });
-$('#lista').addEventListener('click', (e) => {
-  const t = e.target.closest('.tarjeta'); if (!t) return;
+$('#avisos').addEventListener('click', (e) => {
+  const b = e.target.closest('.banner'); if (!b) return;
+  if (b.dataset.f) { activarFiltro(b.dataset.f); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  else if (b.dataset.ac === 'copia') exportar();
+  else if (b.dataset.ac === 'avisos') activarAvisos();
+});
+$('#lista').addEventListener('click', async (e) => {
+  const paso = e.target.closest('[data-ac]');
+  if (paso) { // botones − y + de unidades
+    const m = meds.find((x) => x.id === paso.dataset.id); if (!m) return;
+    m.cantidad = String(Math.max(0, (Number(m.cantidad) || 0) + (paso.dataset.ac === 'mas' ? 1 : -1)));
+    m.actualizado = Date.now();
+    await guardar(m);
+    pintar();
+    return;
+  }
+  const t = e.target.closest('.t-abrir'); if (!t) return;
   abrirForm(meds.find((m) => m.id === t.dataset.id));
 });
 $('#btn-nuevo').addEventListener('click', () => abrirForm(null));
@@ -263,4 +364,8 @@ $('#btn-importar').addEventListener('click', () => $('#archivo').click());
 $('#archivo').addEventListener('change', importar);
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
-cargar();
+cargar().then(() => notificarSiProcede());
+// Pide a iOS que no borre los datos de la app si hay poco espacio
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+// Con conexión, se descarga el lector de códigos en segundo plano para poder escanear sin conexión más adelante
+if (navigator.onLine) setTimeout(() => cargarZXing().catch(() => {}), 4000);

@@ -21,17 +21,21 @@
   <header class="top">
     <h1>Botiquín</h1>
     <p id="resumen" class="resumen"></p>
-    <input id="buscar" type="search" placeholder="Buscar medicamento, principio activo…" autocomplete="off">
-    <div class="chips" id="chips">
-      <button class="chip activo" data-f="todos">Todos</button>
-      <button class="chip" data-f="caducado">Caducados</button>
-      <button class="chip" data-f="pronto">Caducan pronto</button>
-      <button class="chip" data-f="ok">Correctos</button>
+    <div class="fila-busqueda">
+      <input id="buscar" type="search" placeholder="Buscar…" autocomplete="off">
+      <select id="filtro-tipo" aria-label="Filtrar por tipo"></select>
     </div>
-    <select id="filtro-tipo" aria-label="Filtrar por tipo"></select>
+    <div class="chips" id="chips">
+      <button class="chip todos activo" data-f="todos">Todos</button>
+      <button class="chip caducado" data-f="caducado">Caducados</button>
+      <button class="chip pronto" data-f="pronto">Caducan pronto</button>
+      <button class="chip ok" data-f="ok">Correctos</button>
+    </div>
+    
   </header>
 
   <main>
+    <div id="avisos" class="avisos"></div>
     <ul id="lista" class="lista"></ul>
     <p id="vacio" class="vacio" hidden></p>
 
@@ -43,6 +47,8 @@
         <button id="btn-importar" class="btn sec">Importar copia</button>
       </div>
       <input id="archivo" type="file" accept=".json,application/json" hidden>
+      <h2 class="sub">Medicamentos caducados</h2>
+      <p>No los tires a la basura ni por el desagüe: llévalos, con sus envases, al punto SIGRE de cualquier farmacia.</p>
       <p class="aviso">Esta app es solo informativa y no sustituye al prospecto ni al consejo de un profesional sanitario.</p>
     </section>
   </main>
